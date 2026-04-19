@@ -47,7 +47,7 @@ export default function App() {
       setLoading(true);
       try {
         const params = new URLSearchParams({ category });
-        const response = await fetch(`/api/news?${params}`);
+        const response = await fetch(`api/news?${params}`);
         if (!response.ok) throw new Error('Failed to fetch data');
         const data = await response.json();
 
