@@ -21,7 +21,11 @@ export default defineConfig(({ mode }) => {
   }
 
   return {
-    base: '/News-aggregator/',
+    base: './',
+    build: {
+      outDir: 'docs',
+      emptyOutDir: true,
+    },
     plugins: [react(), tailwindcss()],
     server: {
       proxy: {
