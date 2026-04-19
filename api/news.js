@@ -13,11 +13,18 @@ export default async function handler(req, res) {
   const apiKey = process.env.VITE_NEWS_API_KEY || process.env.NEWS_API_KEY;
 
   if (!apiKey) {
-    res.status(500).json({
-      status: 'error',
-      message: 'Server is missing VITE_NEWS_API_KEY or NEWS_API_KEY',
-    });
-    return;
+    console.warn('Missing API Key, using proxy fallback directly');
+    const proxyUrl = `https://saurav.tech/NewsAPI/top-headlines/category/${category}/${country}.json`;
+    try {
+      const proxyReq = await fetch(proxyUrl);
+      const proxyData = await proxyReq.json();
+      return res.status(200).json(proxyData);
+    } catch(err) {
+      return res.status(500).json({
+        status: 'error',
+        message: 'Server missing API key & proxy failed',
+      });
+    }
   }
 
   const url = new URL('https://newsapi.org/v2/top-headlines');
@@ -26,11 +33,26 @@ export default async function handler(req, res) {
   url.searchParams.set('apiKey', apiKey);
 
   try {
-    const r = await fetch(url);
+    const r = await fetch(url, {
+      headers: {
+        'User-Agent': 'NewsSphere/1.0 VercelServerless',
+      }
+    });
     const data = await r.json();
+
+    if (data.status === 'error') {
+      // NewsAPI free plan blocks Vercel. Fallback to public dummy NewsAPI proxy
+      console.warn('NewsAPI error, falling back to proxy:', data.message);
+      const proxyUrl = `https://saurav.tech/NewsAPI/top-headlines/category/${category}/${country}.json`;
+      const proxyReq = await fetch(proxyUrl);
+      const proxyData = await proxyReq.json();
+      return res.status(200).json(proxyData);
+    }
+    
     res.status(200).json(data);
   } catch (e) {
     console.error(e);
+    // If all fails, return 502 to trigger frontend mock data
     res.status(502).json({ status: 'error', message: 'Upstream fetch failed' });
   }
 }
